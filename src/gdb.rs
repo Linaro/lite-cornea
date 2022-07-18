@@ -12,7 +12,7 @@ use gdbstub::target::ext::breakpoints::{BreakpointsOps, HwBreakpoint, HwBreakpoi
 use gdbstub::target::{Target, TargetResult};
 use gdbstub::Connection;
 
-use crate::{memory, resource, FastModelIris};
+use crate::{instance_registry, memory, resource, simulation_time, step, FastModelIris};
 
 pub struct IrisGdbStub<'i> {
     pub iris: &'i mut FastModelIris,
@@ -187,10 +187,36 @@ impl SingleThreadOps for IrisGdbStub<'_> {
 
     fn resume(
         &mut self,
-        _: ResumeAction,
-        _: gdbstub::target::ext::base::GdbInterrupt<'_>,
+        act: ResumeAction,
+        intr: gdbstub::target::ext::base::GdbInterrupt<'_>,
     ) -> Result<StopReason<u32>, ()> {
-        todo!()
+        let mut interrupt = intr.no_async();
+        if act == ResumeAction::Step {
+            step::setup(self.iris, self.instance_id, 1, step::Unit::Instruction).map_err(|_| ())?
+        }
+        if act == ResumeAction::Step || act == ResumeAction::Continue {
+            let sim = instance_registry::get_instance_by_name(
+                self.iris,
+                "framework.SimulationEngine".to_string(),
+            )
+            .map_err(|_| ())?;
+            simulation_time::run(self.iris, sim.id).map_err(|_| ())?;
+            while simulation_time::get(self.iris, sim.id)
+                .map_err(|_| ())?
+                .running
+            {
+                if interrupt.pending() {
+                    simulation_time::stop(self.iris, sim.id).map_err(|_| ())?;
+                    return Ok(StopReason::GdbInterrupt);
+                }
+            }
+            if act == ResumeAction::Step {
+                return Ok(StopReason::DoneStep);
+            } else {
+                return Ok(StopReason::HwBreak);
+            }
+        }
+        Err(())
     }
 }
 
