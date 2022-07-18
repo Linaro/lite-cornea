@@ -1,0 +1,13 @@
+root = true
+
+# set default to match [LCS] .c/.h settings.
+# This will also apply to .S, .mk, .sh, Makefile, .dts, etc.
+[*.rs]
+charset = utf-8
+end_of_line = lf
+indent_size = 4
+#indent_style = tab
+insert_final_newline = true
+max_line_length = 80
+#tab_width = 8
+trim_trailing_whitespace = true
