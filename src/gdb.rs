@@ -1,4 +1,4 @@
-//use std::collections::HashSet;
+use std::collections::hash_map::{Entry, HashMap};
 use std::convert::TryInto;
 use std::io::{Error as IOError, Read, Stdin, Stdout, Write};
 use std::sync::mpsc::{channel, Receiver};
@@ -8,15 +8,20 @@ use gdbstub::arch::{Arch, RegId, Registers};
 use gdbstub::target::ext::base::singlethread::{SingleThreadOps, StopReason};
 use gdbstub::target::ext::base::{BaseOps, ResumeAction};
 #[allow(unused)]
-use gdbstub::target::ext::breakpoints::{BreakpointsOps, HwBreakpoint, HwBreakpointOps};
+use gdbstub::target::ext::breakpoints::{
+    Breakpoints, BreakpointsOps, HwBreakpoint, HwBreakpointOps, SwBreakpoint, SwBreakpointOps,
+};
 use gdbstub::target::{Target, TargetResult};
 use gdbstub::Connection;
 
-use crate::{instance_registry, memory, resource, simulation_time, step, FastModelIris};
+use crate::{
+    breakpoint, instance_registry, memory, resource, simulation_time, step, FastModelIris,
+};
 
 pub struct IrisGdbStub<'i> {
     pub iris: &'i mut FastModelIris,
     pub instance_id: u32,
+    breakpoints: HashMap<u32, u64>,
 }
 
 #[derive(Debug, Default, Clone, PartialEq)]
@@ -26,7 +31,11 @@ pub struct GuestState {
 
 impl<'i> IrisGdbStub<'i> {
     pub fn from_instance(iris: &'i mut FastModelIris, instance_id: u32) -> Self {
-        Self { iris, instance_id }
+        Self {
+            iris,
+            instance_id,
+            breakpoints: HashMap::new(),
+        }
     }
 }
 
@@ -116,6 +125,10 @@ impl<'i> Target for IrisGdbStub<'i> {
     type Error = ();
     fn base_ops(&mut self) -> BaseOps<'_, Self::Arch, Self::Error> {
         BaseOps::SingleThread(self)
+    }
+
+    fn breakpoints(&mut self) -> Option<BreakpointsOps<Self>> {
+        Some(self)
     }
 }
 
@@ -217,6 +230,75 @@ impl SingleThreadOps for IrisGdbStub<'_> {
             }
         }
         Err(())
+    }
+}
+
+impl<'i> Breakpoints for IrisGdbStub<'i> {
+    fn hw_breakpoint(&mut self) -> Option<HwBreakpointOps<Self>> {
+        Some(self)
+    }
+
+    fn sw_breakpoint(&mut self) -> Option<SwBreakpointOps<Self>> {
+        Some(self)
+    }
+}
+impl<'i> SwBreakpoint for IrisGdbStub<'i> {
+    fn add_sw_breakpoint(
+        &mut self,
+        addr: <Self::Arch as Arch>::Usize,
+        k: <Self::Arch as Arch>::BreakpointKind,
+    ) -> TargetResult<bool, Self> {
+        self.add_hw_breakpoint(addr, k)
+    }
+
+    fn remove_sw_breakpoint(
+        &mut self,
+        addr: <Self::Arch as Arch>::Usize,
+        k: <Self::Arch as Arch>::BreakpointKind,
+    ) -> TargetResult<bool, Self> {
+        self.remove_hw_breakpoint(addr, k)
+    }
+}
+
+impl<'i> HwBreakpoint for IrisGdbStub<'i> {
+    fn add_hw_breakpoint(
+        &mut self,
+        addr: <Self::Arch as Arch>::Usize,
+        _: <Self::Arch as Arch>::BreakpointKind,
+    ) -> TargetResult<bool, Self> {
+        if self.breakpoints.contains_key(&addr) {
+            return Ok(true);
+        }
+        if let Ok(id) = breakpoint::code(
+            self.iris,
+            self.instance_id,
+            addr as u64,
+            None,
+            0,
+            true,
+            false,
+        ) {
+            self.breakpoints.insert(addr, id);
+            Ok(true)
+        } else {
+            Ok(false)
+        }
+    }
+    fn remove_hw_breakpoint(
+        &mut self,
+        addr: <Self::Arch as Arch>::Usize,
+        _: <Self::Arch as Arch>::BreakpointKind,
+    ) -> TargetResult<bool, Self> {
+        if let Entry::Occupied(ent) = self.breakpoints.entry(addr) {
+            if let Ok(()) = breakpoint::delete(self.iris, self.instance_id, *ent.get()) {
+                let _ = ent.remove_entry();
+                Ok(true)
+            } else {
+                Ok(false)
+            }
+        } else {
+            Ok(true)
+        }
     }
 }
 
