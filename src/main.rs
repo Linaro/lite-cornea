@@ -216,7 +216,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
         ChildList(OptionalInstanceArgs { inst }) => {
-            let name = inst.unwrap_or_else(|| String::new());
+            let name = match inst.clone() {
+                Some(i) => instance_registry::get_instance_by_name(&mut fvp, i)?.name,
+                None => String::new(),
+            };
             for instance in instance_registry::list_instances(&mut fvp, name.clone())? {
                 if instance.name != name {
                     println!("{}", instance.name.trim_start_matches(&name));
