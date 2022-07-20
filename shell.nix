@@ -9,5 +9,6 @@ pkgs.mkShell {
     cargo-watch
     gnuplot
     gdb
+    lsof # Helpful to determine FVP port
   ];
 }
