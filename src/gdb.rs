@@ -1,3 +1,4 @@
+use std::borrow::Borrow;
 use std::collections::hash_map::{Entry, HashMap};
 use std::convert::TryInto;
 use std::io::{Error as IOError, Read, Stdin, Stdout, Write};
@@ -11,16 +12,19 @@ use gdbstub::target::ext::base::{BaseOps, ResumeAction};
 use gdbstub::target::ext::breakpoints::{
     Breakpoints, BreakpointsOps, HwBreakpoint, HwBreakpointOps, SwBreakpoint, SwBreakpointOps,
 };
+use gdbstub::target::ext::monitor_cmd::{ConsoleOutput, MonitorCmd, MonitorCmdOps};
 use gdbstub::target::{Target, TargetResult};
-use gdbstub::Connection;
+use gdbstub::{outputln, Connection};
 
 use crate::{
-    breakpoint, instance_registry, memory, resource, simulation_time, step, FastModelIris,
+    breakpoint, instance_registry, memory, resource, simulation, simulation_time, step,
+    FastModelIris,
 };
 
 pub struct IrisGdbStub<'i> {
     pub iris: &'i mut FastModelIris,
     pub instance_id: u32,
+    sim: u32,
     breakpoints: HashMap<u32, u64>,
 }
 
@@ -30,12 +34,17 @@ pub struct GuestState {
 }
 
 impl<'i> IrisGdbStub<'i> {
-    pub fn from_instance(iris: &'i mut FastModelIris, instance_id: u32) -> Self {
-        Self {
+    pub fn from_instance(iris: &'i mut FastModelIris, instance_id: u32) -> std::io::Result<Self> {
+        let sim = instance_registry::get_instance_by_name(
+            iris,
+            "framework.SimulationEngine".to_string(),
+        )?;
+        Ok(Self {
             iris,
             instance_id,
             breakpoints: HashMap::new(),
-        }
+            sim: sim.id,
+        })
     }
 }
 
@@ -130,6 +139,10 @@ impl<'i> Target for IrisGdbStub<'i> {
     fn breakpoints(&mut self) -> Option<BreakpointsOps<Self>> {
         Some(self)
     }
+
+    fn monitor_cmd(&mut self) -> Option<MonitorCmdOps<Self>> {
+        Some(self)
+    }
 }
 
 impl SingleThreadOps for IrisGdbStub<'_> {
@@ -208,18 +221,13 @@ impl SingleThreadOps for IrisGdbStub<'_> {
             step::setup(self.iris, self.instance_id, 1, step::Unit::Instruction).map_err(|_| ())?
         }
         if act == ResumeAction::Step || act == ResumeAction::Continue {
-            let sim = instance_registry::get_instance_by_name(
-                self.iris,
-                "framework.SimulationEngine".to_string(),
-            )
-            .map_err(|_| ())?;
-            simulation_time::run(self.iris, sim.id).map_err(|_| ())?;
-            while simulation_time::get(self.iris, sim.id)
+            simulation_time::run(self.iris, self.sim).map_err(|_| ())?;
+            while simulation_time::get(self.iris, self.sim)
                 .map_err(|_| ())?
                 .running
             {
                 if interrupt.pending() {
-                    simulation_time::stop(self.iris, sim.id).map_err(|_| ())?;
+                    simulation_time::stop(self.iris, self.sim).map_err(|_| ())?;
                     return Ok(StopReason::GdbInterrupt);
                 }
             }
@@ -299,6 +307,21 @@ impl<'i> HwBreakpoint for IrisGdbStub<'i> {
         } else {
             Ok(true)
         }
+    }
+}
+
+impl<'i> MonitorCmd for IrisGdbStub<'i> {
+    fn handle_monitor_cmd(&mut self, cmd: &[u8], mut out: ConsoleOutput<'_>) -> Result<(), ()> {
+        match String::from_utf8_lossy(cmd).borrow() {
+            "reset" => {
+                simulation::reset(self.iris, self.sim, false).map_err(|_| ())?;
+                simulation::wait(self.iris, self.sim).map_err(|_| ())?;
+            }
+            c => {
+                outputln!(out, "Monitor command {} not supported", c);
+            }
+        }
+        Ok(())
     }
 }
 

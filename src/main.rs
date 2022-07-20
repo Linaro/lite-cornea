@@ -252,7 +252,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         GdbProxy(InstanceArgs { inst }) => {
             let instance = instance_registry::get_instance_by_name(&mut fvp, inst.clone())?;
-            let mut proxy = IrisGdbStub::from_instance(&mut fvp, instance.id);
+            let mut proxy = IrisGdbStub::from_instance(&mut fvp, instance.id)?;
             let mut stub = GdbStub::new(GdbOverPipe::new(stdin(), stdout()));
             eprintln!("Disconnected with {:?}", stub.run(&mut proxy)?);
         }
