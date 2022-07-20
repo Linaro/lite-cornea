@@ -25,7 +25,7 @@ enum Command {
     /// Print information about an instance
     ResourceList(InstanceArgs),
     /// Print the children of this instance
-    ChildList(InstanceArgs),
+    ChildList(OptionalInstanceArgs),
     /// Read memory from the prespective of an instance
     MemoryRead(ReadMemArgs),
     /// Break at a pc range
@@ -34,6 +34,12 @@ enum Command {
     ResourceRead(ResourceReadArgs),
     /// Provide a GDB server for the iris server over a pipe
     GdbProxy(InstanceArgs),
+}
+
+#[derive(Parser, Debug)]
+struct OptionalInstanceArgs {
+    /// The name of the instance to query
+    inst: Option<String>,
 }
 
 #[derive(Parser, Debug)]
@@ -209,11 +215,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
         }
-        ChildList(InstanceArgs { inst }) => {
-            let instance = instance_registry::get_instance_by_name(&mut fvp, inst.clone())?;
-            for instance in instance_registry::list_instances(&mut fvp, instance.name)? {
-                if instance.name != inst {
-                    println!("{}", instance.name.trim_start_matches(&inst));
+        ChildList(OptionalInstanceArgs { inst }) => {
+            let name = inst.unwrap_or_else(|| String::new());
+            for instance in instance_registry::list_instances(&mut fvp, name.clone())? {
+                if instance.name != name {
+                    println!("{}", instance.name.trim_start_matches(&name));
                 }
             }
         }
