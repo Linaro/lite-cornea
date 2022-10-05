@@ -59,7 +59,7 @@ $ cornea resurce-read component.IoT_Corstone_1000.host.cluster0.cpu0 PC
        0 │ PC
 ```
 
-Reading 100 bytes of memory at address 0 as seen by the flash memory
+Reading 8 bytes of memory at address 6 as seen by the flash memory
 grouped into u16 sized entries:
 
 ```
