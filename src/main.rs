@@ -9,7 +9,7 @@ use cornea::gdb::{GdbOverPipe, IrisGdbStub};
 #[allow(unused)]
 use cornea::{
     breakpoint, checkpoint, event, event_stream, instance_registry, memory, resource,
-    simulation_time, step, FastModelIris,
+    simulation, simulation_time, step, FastModelIris,
 };
 
 #[derive(Parser, Debug)]
@@ -30,6 +30,8 @@ enum Command {
     MemoryRead(ReadMemArgs),
     /// Break at a pc range
     Break(ReadMemArgs),
+    /// Reset the platform
+    Reset,
     /// Read a reesource on an instance
     ResourceRead(ResourceReadArgs),
     /// Provide a GDB server for the iris server over a pipe
@@ -258,6 +260,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             simulation_time::run(&mut fvp, sim.id)?;
             while simulation_time::get(&mut fvp, sim.id)?.running {}
             breakpoint::delete(&mut fvp, instance.id, bp)?;
+        }
+        Reset => {
+            let sim = instance_registry::get_instance_by_name(
+                &mut fvp,
+                "framework.SimulationEngine".to_string(),
+            )?;
+            simulation::reset(&mut fvp, sim.id, false)?;
+            simulation::wait(&mut fvp, sim.id)?;
         }
         GdbProxy(InstanceArgs { inst }) => {
             let instance = instance_registry::get_instance_by_name(&mut fvp, inst.clone())?;
