@@ -5,11 +5,10 @@ use std::str::FromStr;
 use clap::{Parser, Subcommand};
 use gdbstub::GdbStub;
 
-use cornea::gdb::{GdbOverPipe, IrisGdbStub};
 #[allow(unused)]
 use cornea::{
-    breakpoint, checkpoint, event, event_stream, instance_registry, memory, resource,
-    simulation, simulation_time, step, FastModelIris,
+    breakpoint, checkpoint, event, event_stream, instance_registry, memory, resource, simulation,
+    simulation_time, step, FastModelIris,
 };
 
 #[derive(Parser, Debug)]
@@ -271,9 +270,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         GdbProxy(InstanceArgs { inst }) => {
             let instance = instance_registry::get_instance_by_name(&mut fvp, inst.clone())?;
-            let mut proxy = IrisGdbStub::from_instance(&mut fvp, instance.id)?;
-            let mut stub = GdbStub::new(GdbOverPipe::new(stdin(), stdout()));
-            eprintln!("Disconnected with {:?}", stub.run(&mut proxy)?);
+            let res = resource::get_list(&mut fvp, instance.id, None, None)?;
+            if res.iter().any(|r| r.name == "X30") {
+                use cornea::gdb::a64::{GdbOverPipe, IrisGdbStub};
+
+                let mut proxy = IrisGdbStub::from_instance(&mut fvp, instance.id)?;
+                let mut stub = GdbStub::new(GdbOverPipe::new(stdin(), stdout()));
+                eprintln!("Disconnected with {:?}", stub.run(&mut proxy)?);
+            } else {
+                use cornea::gdb::t32::{GdbOverPipe, IrisGdbStub};
+
+                let mut proxy = IrisGdbStub::from_instance(&mut fvp, instance.id)?;
+                let mut stub = GdbStub::new(GdbOverPipe::new(stdin(), stdout()));
+                eprintln!("Disconnected with {:?}", stub.run(&mut proxy)?);
+            }
         }
     }
     fvp.close()?;
