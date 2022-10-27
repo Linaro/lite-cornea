@@ -1,8 +1,7 @@
-let
-  pkgs = import <nixpkgs> {};
-in
-pkgs.mkShell {
-  buildInputs = with pkgs; [
+nixpkgs:
+nixpkgs.stdenv.mkDerivation {
+  name = "cornea-dev-env";
+  buildInputs = with nixpkgs; [
     rustc
     rustfmt
     cargo
