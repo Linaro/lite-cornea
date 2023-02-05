@@ -180,7 +180,11 @@ fn print_hex_dump(address: u64, buff: &[u8], group_by: GroupBy) {
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Cli::parse();
-    let mut fvp = FastModelIris::from_port(None, args.port.unwrap_or(7100))?;
+    let mut fvp = FastModelIris::from_port(None, args.port.unwrap_or(7100))
+        .or_else(|_| FastModelIris::from_port(None, args.port.unwrap_or(7101)))
+        .or_else(|_| FastModelIris::from_port(None, args.port.unwrap_or(7102)))
+        .or_else(|_| FastModelIris::from_port(None, args.port.unwrap_or(7103)))
+        .or_else(|_| FastModelIris::from_port(None, args.port.unwrap_or(7104)))?;
     let _my_id = fvp.register()?;
     use Command::*;
     match args.command {
