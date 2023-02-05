@@ -178,13 +178,24 @@ fn print_hex_dump(address: u64, buff: &[u8], group_by: GroupBy) {
     }
 }
 
+fn get_iris(port: Option<u16>) -> Result<FastModelIris, std::io::Error> {
+    if let Some(port) = port {
+        FastModelIris::from_port(None, port)
+    } else {
+        let mut fvp = FastModelIris::from_port(None, 7100);
+        for port in 7101..7105 {
+            if fvp.is_ok() {
+                break;
+            }
+            fvp = FastModelIris::from_port(None, port)
+        }
+        fvp
+    }
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Cli::parse();
-    let mut fvp = FastModelIris::from_port(None, args.port.unwrap_or(7100))
-        .or_else(|_| FastModelIris::from_port(None, args.port.unwrap_or(7101)))
-        .or_else(|_| FastModelIris::from_port(None, args.port.unwrap_or(7102)))
-        .or_else(|_| FastModelIris::from_port(None, args.port.unwrap_or(7103)))
-        .or_else(|_| FastModelIris::from_port(None, args.port.unwrap_or(7104)))?;
+    let mut fvp = get_iris(args.port)?;
     let _my_id = fvp.register()?;
     use Command::*;
     match args.command {
