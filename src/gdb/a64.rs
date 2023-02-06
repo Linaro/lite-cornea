@@ -97,9 +97,9 @@ impl RegId for Register {
         use Register::*;
         Some(match id {
             32 => PC,
-            33 => SP,
-            34 => XPSR,
-            id if id < 32 => X(id as u8),
+            33 => XPSR,
+            31 => SP,
+            id if id < 31 => X(id as u8),
             _ => return None,
         })
         .map(|r| (r, 0))
@@ -129,8 +129,9 @@ impl SingleThreadOps for IrisGdbStub<'_> {
         {
             let regnum = match res.name.as_str() {
                 "PC" => 32,
-                "SP" => 33,
-                "XPSR" => 34,
+                "SP" => 31,
+                "XPSR" => 33,
+                "CPSR" => 33,
                 x if x.starts_with("X") => {
                     if let Ok(regnum) = x[1..].parse() {
                         regnum
