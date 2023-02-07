@@ -1,9 +1,6 @@
 use std::borrow::Borrow;
 use std::collections::hash_map::{Entry, HashMap};
 use std::convert::TryInto;
-use std::io::{Error as IOError, Read, Stdin, Stdout, Write};
-use std::sync::mpsc::{channel, Receiver};
-use std::thread::spawn;
 
 use gdbstub::arch::{Arch, RegId, Registers};
 use gdbstub::target::ext::base::singlethread::{SingleThreadOps, StopReason};
@@ -14,7 +11,7 @@ use gdbstub::target::ext::breakpoints::{
 };
 use gdbstub::target::ext::monitor_cmd::{ConsoleOutput, MonitorCmd, MonitorCmdOps};
 use gdbstub::target::{Target, TargetResult};
-use gdbstub::{outputln, Connection};
+use gdbstub::outputln;
 
 use crate::{
     breakpoint, instance_registry, memory, resource, simulation, simulation_time, step,
@@ -304,47 +301,5 @@ impl Arch for Armv8aArch {
     type BreakpointKind = usize;
 }
 
-pub struct GdbOverPipe {
-    rx: Receiver<Result<u8, IOError>>,
-    write: Stdout,
-}
 
-impl<'a> GdbOverPipe {
-    pub fn new(read: Stdin, write: Stdout) -> Self {
-        let (tx, rx) = channel();
-        spawn(move || {
-            let mut byte = [0u8];
-            let mut read = read;
-            loop {
-                match read.read(&mut byte) {
-                    Ok(0) => break,
-                    Ok(_) => tx.send(Ok(byte[0])).unwrap(),
-                    Err(error) => tx.send(Err(error)).unwrap(),
-                }
-            }
-        });
-        Self { rx, write }
-    }
-}
-
-impl Connection for GdbOverPipe {
-    type Error = IOError;
-    fn write(&mut self, byte: u8) -> Result<(), Self::Error> {
-        let outbuf = [byte; 1];
-        self.write.write(&outbuf)?;
-        self.write.flush()?;
-        Ok(())
-    }
-    fn flush(&mut self) -> Result<(), Self::Error> {
-        self.write.flush()
-    }
-    fn read(&mut self) -> Result<u8, Self::Error> {
-        self.rx.recv().unwrap()
-    }
-    fn peek(&mut self) -> Result<Option<u8>, Self::Error> {
-        match self.rx.try_recv() {
-            Ok(res) => res.map(Some),
-            Err(_) => Ok(None),
-        }
-    }
-}
+pub use crate::gdb::t32::GdbOverPipe;
