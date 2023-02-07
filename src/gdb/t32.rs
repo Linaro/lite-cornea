@@ -368,7 +368,9 @@ impl Connection for GdbOverPipe {
         self.write.flush()
     }
     fn read(&mut self) -> Result<u8, Self::Error> {
-        self.rx.recv().unwrap()
+        self.rx
+            .recv()
+            .map_err(|_| std::io::ErrorKind::ConnectionReset)?
     }
     fn peek(&mut self) -> Result<Option<u8>, Self::Error> {
         match self.rx.try_recv() {
