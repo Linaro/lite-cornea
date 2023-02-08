@@ -1,7 +1,7 @@
 # Resources
 
-Iris Resources are very similar to registers, and most
-hardware registers are available as resources on instances.
+Iris Resources are a collection of hardware registers and
+invocation parameters speciifc to that hardware.
 
 Cornea allows for resource discovery with the resource-list
 subcommand. For example, the following prints a table
@@ -17,7 +17,7 @@ Reg   │   64 │                   X2 │ X2
 ---- etc. ----
 ```
 
-These resouurces may be accessed by name with the resource-
+These resources may be accessed by name with the resource-
 read subcommand. For example, the following printsthe PC of
 the host cpu0:
 
@@ -27,4 +27,19 @@ $ cornea resurce-read component.IoT_Corstone_1000.host.cluster0.cpu0 PC
 ═════════╪════════════════════════════════════
        0 │ PC_MEMSPACE
        0 │ PC
+```
+
+Furthermore, to look at the semihosting parameters for the scp cpu:
+
+```
+$ cornea resource-read component.TC2.css.scp.cpu semihosting
+   value │ name
+═════════╪════════════════════════════════════
+       1 │ semihosting-enable
+      ab │ semihosting-Thumb_SVC
+       0 │ semihosting-heap_base
+20700000 │ semihosting-heap_limit
+20800000 │ semihosting-stack_base
+20700000 │ semihosting-stack_limit
+       0 │ semihosting-prefix
 ```
