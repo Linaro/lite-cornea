@@ -3,6 +3,7 @@ use std::collections::hash_map::{Entry, HashMap};
 use std::convert::TryInto;
 
 use gdbstub::arch::{Arch, RegId, Registers};
+use gdbstub::outputln;
 use gdbstub::target::ext::base::singlethread::{SingleThreadOps, StopReason};
 use gdbstub::target::ext::base::{BaseOps, ResumeAction};
 #[allow(unused)]
@@ -11,7 +12,6 @@ use gdbstub::target::ext::breakpoints::{
 };
 use gdbstub::target::ext::monitor_cmd::{ConsoleOutput, MonitorCmd, MonitorCmdOps};
 use gdbstub::target::{Target, TargetResult};
-use gdbstub::outputln;
 
 use crate::{
     breakpoint, instance_registry, memory, resource, simulation, simulation_time, step,
@@ -22,7 +22,9 @@ pub struct IrisGdbStub<'i> {
     pub iris: &'i mut FastModelIris,
     pub instance_id: u32,
     sim: u32,
-    breakpoints: HashMap<u64, u64>,
+    breakpoints: HashMap<u64, Vec<u64>>,
+    resources: Option<Vec<resource::ResourceInfo>>,
+    spaces: Option<Vec<memory::Space>>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -47,6 +49,8 @@ impl<'i> IrisGdbStub<'i> {
             instance_id,
             breakpoints: HashMap::new(),
             sim: sim.id,
+            resources: None,
+            spaces: None,
         })
     }
 }
@@ -121,9 +125,11 @@ impl<'i> Target for IrisGdbStub<'i> {
 
 impl SingleThreadOps for IrisGdbStub<'_> {
     fn read_registers(&mut self, regs: &mut GuestState) -> TargetResult<(), Self> {
-        for res in
-            resource::get_list(&mut self.iris, self.instance_id, None, None).map_err(|_| ())?
-        {
+        if self.resources.is_none() {
+                let resources = resource::get_list(&mut self.iris, self.instance_id, None, None).map_err(|_| ())?;
+                self.resources = Some(resources);
+        };
+        for res in self.resources.as_ref().unwrap() {
             let regnum = match res.name.as_str() {
                 "PC" => 32,
                 "SP" => 31,
@@ -245,19 +251,28 @@ impl<'i> HwBreakpoint for IrisGdbStub<'i> {
         if self.breakpoints.contains_key(&addr) {
             return Ok(true);
         }
-        if let Ok(id) = breakpoint::code(
-            self.iris,
-            self.instance_id,
-            addr as u64,
-            None,
-            0,
-            true,
-            false,
-        ) {
-            self.breakpoints.insert(addr, id);
-            Ok(true)
-        } else {
+        if self.spaces.is_none() {
+                let spaces= memory::spaces(self.iris, self.instance_id)?;
+                self.spaces = Some(spaces);
+        };
+        let Self { spaces, iris, instance_id, .. } = self;
+        let store: Vec<u64> = spaces.as_ref().unwrap().iter().filter_map(|space| {
+            breakpoint::code(
+                iris,
+                *instance_id,
+                addr as u64,
+                None,
+                space.id,
+                true,
+                false,
+            ).ok()
+        }).collect();
+
+        if store.is_empty() {
             Ok(false)
+        } else {
+            self.breakpoints.insert(addr, store);
+            Ok(true)
         }
     }
     fn remove_hw_breakpoint(
@@ -266,15 +281,14 @@ impl<'i> HwBreakpoint for IrisGdbStub<'i> {
         _: <Self::Arch as Arch>::BreakpointKind,
     ) -> TargetResult<bool, Self> {
         if let Entry::Occupied(ent) = self.breakpoints.entry(addr) {
-            if let Ok(()) = breakpoint::delete(self.iris, self.instance_id, *ent.get()) {
-                let _ = ent.remove_entry();
-                Ok(true)
-            } else {
-                Ok(false)
+            for bkpt in ent.get() {
+                if let Err(_) = breakpoint::delete(self.iris, self.instance_id, *bkpt) {
+                    return Ok(false)
+                }
             }
-        } else {
-            Ok(true)
+            let _ = ent.remove_entry();
         }
+        Ok(true)
     }
 }
 
@@ -300,6 +314,5 @@ impl Arch for Armv8aArch {
     type RegId = Register;
     type BreakpointKind = usize;
 }
-
 
 pub use crate::gdb::t32::GdbOverPipe;
