@@ -21,6 +21,12 @@ struct Cli {
 
 #[derive(Subcommand, Debug)]
 enum Command {
+    /// List all available event streams
+    EventSources(InstanceArgs),
+    /// Get delailed information about an event source
+    EventFields(ResourceReadArgs),
+    /// Log events as they occur
+    EventLog(ResourceOptionArgs),
     /// Print information about an instance
     ResourceList(InstanceArgs),
     /// Print the children of this instance
@@ -69,6 +75,13 @@ struct ResourceReadArgs {
     inst: String,
     /// Resource to print from
     resource: String,
+}
+#[derive(Parser, Debug)]
+struct ResourceOptionArgs {
+    /// The name of the instance to read from
+    inst: String,
+    /// Resource to print from
+    resource: Option<String>,
 }
 
 #[allow(unused)]
@@ -196,7 +209,7 @@ fn get_iris(port: Option<u16>) -> Result<FastModelIris, std::io::Error> {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Cli::parse();
     let mut fvp = get_iris(args.port)?;
-    let _my_id = fvp.register()?;
+    let my_id = fvp.register()?;
     use Command::*;
     match args.command {
         ResourceList(InstanceArgs { inst }) => {
@@ -217,6 +230,60 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let description = res.description.unwrap_or_else(|| "".to_string());
                 println!("{typ:<6}│{bits:>5} │ {name:>20} │ {description}");
             }
+        }
+        EventSources(InstanceArgs { inst }) => {
+            let instance = instance_registry::get_instance_by_name(&mut fvp, inst).unwrap();
+            let sources = event::sources(&mut fvp, instance.id)?;
+            let name_len = sources.iter().map(|s| s.name.len()).max().unwrap_or(0);
+            println!("{:>name_len$} │ {}", "name", "description");
+            println!("{:═>name_len$}═╪═{:═<20}", "", "");
+            for res in sources {
+                let name = res.name;
+                let description = res.description.unwrap_or_else(|| "".to_string());
+                println!("{name:>name_len$} │ {description}");
+            }
+        }
+        EventFields(ResourceReadArgs { inst, resource }) => {
+            let instance = instance_registry::get_instance_by_name(&mut fvp, inst).unwrap();
+            let source = event::source(&mut fvp, instance.id, resource)?;
+            println!(
+                "{:<6}│{:^6}│ {:>20} │ {}",
+                "type", "size", "name", "description"
+            );
+            println!("{:═<6}╪{:═^6}╪═{:═>20}═╪═{:═<20}", "", "", "", "");
+            for res in source.fields {
+                let typ = res.typ;
+                let name = res.name;
+                let bits = res.size;
+                let description = res.description.unwrap_or_else(|| "".to_string());
+                println!("{typ:<6}│{bits:>5} │ {name:>20} │ {description}");
+            }
+        }
+        EventLog(ResourceOptionArgs {
+            inst,
+            resource: Some(resource),
+        }) => {
+            let instance = instance_registry::get_instance_by_name(&mut fvp, inst).unwrap();
+            let source = event::source(&mut fvp, instance.id, resource.clone())?;
+            let _stream =
+                event_stream::create(&mut fvp, Some(instance.id), false, my_id, source.id, false)?;
+            fvp.register_callback(
+                format!("ec_{}", resource),
+                Box::new(|params| Ok(println!("{}", params))),
+            );
+            fvp.wait_for_events();
+        }
+        EventLog(ResourceOptionArgs {
+            inst,
+            resource: None,
+        }) => {
+            let instance = instance_registry::get_instance_by_name(&mut fvp, inst).unwrap();
+            let sources = event::sources(&mut fvp, instance.id)?;
+            for s in sources {
+                let _stream =
+                    event_stream::create(&mut fvp, Some(instance.id), false, my_id, s.id, false);
+            }
+            fvp.wait_for_events();
         }
         ResourceRead(ResourceReadArgs { inst, resource }) => {
             let instance = instance_registry::get_instance_by_name(&mut fvp, inst)?;
