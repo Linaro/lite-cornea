@@ -29,6 +29,8 @@ enum Command {
     EventLog(ResourceOptionArgs),
     /// Print information about an instance
     ResourceList(InstanceArgs),
+    /// Print information about an instance
+    MemorySpaces(InstanceArgs),
     /// Print the children of this instance
     ChildList(OptionalInstanceArgs),
     /// Read memory from the prespective of an instance
@@ -307,6 +309,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 if instance.name != name {
                     println!("{}", instance.name.trim_start_matches(&name));
                 }
+            }
+        }
+        MemorySpaces(InstanceArgs { inst }) => {
+            let instance = instance_registry::get_instance_by_name(&mut fvp, inst)?;
+            let spaces = memory::spaces(&mut fvp, instance.id)?;
+            let name_len = spaces.iter().map(|s| s.name.len()).max().unwrap_or(0);
+            println!("{:>name_len$} │ {}", "name", "description");
+            println!("{:═>name_len$}═╪═{:═<35}", "", "");
+            for space in &spaces {
+                println!(
+                    "{:>name_len$} │ {}",
+                    space.name,
+                    space.description.as_deref().unwrap_or("")
+                );
             }
         }
         MemoryRead(ReadMemArgs {
