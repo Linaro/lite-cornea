@@ -84,6 +84,13 @@ pub mod iris_client {
         type Out: DeserializeOwned + std::fmt::Debug;
     }
 
+    #[derive(Deserialize, Debug)]
+    pub enum Void {}
+
+    impl IrisOut for () {
+        type Out = Void;
+    }
+
     impl FastModelIris {
         /// Construct a Fast Model from command line arguments
         pub fn from_args<I, S>(args: I) -> Result<Self, IOError>
@@ -261,7 +268,7 @@ pub mod iris_client {
                     let payload = parts.next();
                     match (size, payload) {
                         (Some(size), Some(payload)) => {
-                            let size = size.unwrap();
+                            let size = size.expect("HERE");
                             if payload.len() == size {
                                 //eprintln!("<- {:?}",payload);
                                 let res: Result<RpcRes, _> = serde_json::from_str(payload);
@@ -333,6 +340,11 @@ pub mod iris_client {
             I: Into<RpcReq<'a, M>>,
         {
             self.send(message).and_then(|r| self.wait(r))
+        }
+
+        pub fn wait_for_events(&mut self) -> IOError {
+            let handle: MessageHandle<()> = MessageHandle(0, PhantomData);
+            self.wait(handle).unwrap_err()
         }
 
         /// Execute a Batch of with Iris within the Fast Model.
