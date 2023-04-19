@@ -154,10 +154,23 @@ impl SingleThreadOps for IrisGdbStub<'_> {
     }
 
     fn read_addrs(&mut self, start_addr: u64, data: &mut [u8]) -> TargetResult<(), Self> {
+        if self.resources.is_none() {
+                let resources = resource::get_list(&mut self.iris, self.instance_id, None, None).map_err(|_| ())?;
+                self.resources = Some(resources);
+        };
+        let mut memspace_res = Err(());
+        for res in self.resources.as_ref().unwrap() {
+            match res.name.as_str() {
+                "PC_MEMSPACE" => memspace_res = Ok(res.id),
+                _ => (),
+            }
+        }
+        let memspace_res = memspace_res?;
+        let memspace = *resource::read(&mut self.iris, self.instance_id, vec![memspace_res])?.data.get(0).ok_or(())?;
         let mem = memory::read(
             &mut self.iris,
             self.instance_id,
-            0,
+            memspace,
             start_addr as u64,
             1,
             data.len() as u64,
