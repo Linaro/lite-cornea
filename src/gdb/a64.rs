@@ -8,7 +8,8 @@ use gdbstub::target::ext::base::singlethread::{SingleThreadOps, StopReason};
 use gdbstub::target::ext::base::{BaseOps, ResumeAction};
 #[allow(unused)]
 use gdbstub::target::ext::breakpoints::{
-    Breakpoints, BreakpointsOps, HwBreakpoint, HwBreakpointOps, SwBreakpoint, SwBreakpointOps,
+    Breakpoints, BreakpointsOps, HwBreakpoint, HwBreakpointOps, HwWatchpoint, HwWatchpointOps,
+    SwBreakpoint, SwBreakpointOps, WatchKind,
 };
 use gdbstub::target::ext::monitor_cmd::{ConsoleOutput, MonitorCmd, MonitorCmdOps};
 use gdbstub::target::{Target, TargetResult};
@@ -23,6 +24,7 @@ pub struct IrisGdbStub<'i> {
     pub instance_id: u32,
     sim: u32,
     breakpoints: HashMap<u64, Vec<u64>>,
+    watchpoints: HashMap<u64, Vec<u64>>,
     resources: Option<Vec<resource::ResourceInfo>>,
     spaces: Option<Vec<memory::Space>>,
 }
@@ -48,6 +50,7 @@ impl<'i> IrisGdbStub<'i> {
             iris,
             instance_id,
             breakpoints: HashMap::new(),
+            watchpoints: HashMap::new(),
             sim: sim.id,
             resources: None,
             spaces: None,
@@ -233,9 +236,14 @@ impl<'i> Breakpoints for IrisGdbStub<'i> {
         Some(self)
     }
 
+    fn hw_watchpoint(&mut self) -> Option<HwWatchpointOps<Self>> {
+        Some(self)
+    }
+
     fn sw_breakpoint(&mut self) -> Option<SwBreakpointOps<Self>> {
         Some(self)
     }
+
 }
 impl<'i> SwBreakpoint for IrisGdbStub<'i> {
     fn add_sw_breakpoint(
@@ -297,6 +305,78 @@ impl<'i> HwBreakpoint for IrisGdbStub<'i> {
             for bkpt in ent.get() {
                 if let Err(_) = breakpoint::delete(self.iris, self.instance_id, *bkpt) {
                     return Ok(false)
+                }
+            }
+            let _ = ent.remove_entry();
+        }
+        Ok(true)
+    }
+}
+
+fn kind_to_str(kind: WatchKind) -> String {
+    match kind {
+        WatchKind::Read => "r",
+        WatchKind::Write => "w",
+        WatchKind::ReadWrite => "rw",
+    }
+    .to_string()
+}
+
+impl<'i> HwWatchpoint for IrisGdbStub<'i> {
+    fn add_hw_watchpoint(
+        &mut self,
+        addr: <Self::Arch as Arch>::Usize,
+        kind: WatchKind,
+    ) -> TargetResult<bool, Self> {
+        if self.watchpoints.contains_key(&addr) {
+            return Ok(true);
+        }
+        if self.spaces.is_none() {
+            let spaces = memory::spaces(self.iris, self.instance_id)?;
+            self.spaces = Some(spaces);
+        };
+        let Self {
+            spaces,
+            iris,
+            instance_id,
+            ..
+        } = self;
+        let store: Vec<u64> = spaces
+            .as_ref()
+            .unwrap()
+            .iter()
+            .filter_map(|space| {
+                breakpoint::set(
+                    iris,
+                    *instance_id,
+                    addr as u64,
+                    Some(kind_to_str(kind)),
+                    None,
+                    Some(space.id),
+                    true,
+                    crate::breakpoint::Type::Data,
+                    false,
+                )
+                .ok()
+            })
+            .collect();
+
+        if store.is_empty() {
+            Ok(false)
+        } else {
+            self.watchpoints.insert(addr, store);
+            Ok(true)
+        }
+    }
+    fn remove_hw_watchpoint(
+        &mut self,
+        addr: <Self::Arch as Arch>::Usize,
+        _kind: WatchKind,
+    ) -> TargetResult<bool, Self> {
+        if let Entry::Occupied(ent) = self.watchpoints.entry(addr) {
+            for bkpt in ent.get() {
+                if let Err(_) = breakpoint::delete(self.iris, self.instance_id, *bkpt) {
+                    return Ok(false);
                 }
             }
             let _ = ent.remove_entry();
