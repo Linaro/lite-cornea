@@ -283,7 +283,6 @@ impl<'i> HwBreakpoint for IrisGdbStub<'i> {
             addr as u64,
             None,
             0,
-            true,
             false,
         ) {
             self.breakpoints.insert(addr, id);

@@ -1,6 +1,8 @@
 use std::borrow::Borrow;
 use std::collections::hash_map::{Entry, HashMap};
+use std::collections::btree_map::{BTreeMap, Entry as BTreeEntry};
 use std::convert::TryInto;
+use std::sync::{Arc, Mutex};
 
 use gdbstub::arch::{Arch, RegId, Registers};
 use gdbstub::outputln;
@@ -14,19 +16,33 @@ use gdbstub::target::ext::breakpoints::{
 use gdbstub::target::ext::monitor_cmd::{ConsoleOutput, MonitorCmd, MonitorCmdOps};
 use gdbstub::target::{Target, TargetResult};
 
+use serde::Deserialize;
+
 use crate::{
     breakpoint, instance_registry, memory, resource, simulation, simulation_time, step,
+    event, event_stream,
     FastModelIris,
 };
+
+#[derive(Debug, Deserialize)]
+struct WatchTrigger {
+    #[serde(rename="ACCESS_RW")]
+    kind: String,
+    #[serde(rename="ACCESS_ADDR")]
+    addr: u64,
+    #[serde(rename="ACCESS_SIZE")]
+    size: u64,
+}
 
 pub struct IrisGdbStub<'i> {
     pub iris: &'i mut FastModelIris,
     pub instance_id: u32,
     sim: u32,
     breakpoints: HashMap<u64, Vec<u64>>,
-    watchpoints: HashMap<u64, Vec<u64>>,
+    watchpoints: BTreeMap<u64, Vec<u64>>,
     resources: Option<Vec<resource::ResourceInfo>>,
     spaces: Option<Vec<memory::Space>>,
+    last_watch_trigger: Arc<Mutex<Option<WatchTrigger>>>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -46,14 +62,36 @@ impl<'i> IrisGdbStub<'i> {
             iris,
             "framework.SimulationEngine".to_string(),
         )?;
+        let source = event::source(iris, instance_id, "IRIS_BREAKPOINT_HIT".to_string())?;
+        let last_watch_trigger = Arc::new(Mutex::new(None));
+        let _stream =
+            event_stream::create(iris, Some(instance_id), false, iris.inst_id.unwrap(), source.id, false, true)?;
+        let cb_last_watch_trigger = last_watch_trigger.clone();
+        iris.register_callback(
+            "ec_IRIS_BREAKPOINT_HIT".to_string(), Box::new(
+                move |mut params| {
+                    if let Ok(ref mut trigger) = cb_last_watch_trigger.try_lock() {
+                        if let Some(watch_trigger) = params
+                            .as_object_mut()
+                            .and_then(|p| p.get_mut("fields"))
+                            .and_then(|f| serde_json::value::from_value(f.take()).ok())
+                        {
+                            **trigger = Some(watch_trigger);
+                        }
+                    }
+                    Ok(())
+                }
+            )
+        );
         Ok(Self {
             iris,
             instance_id,
             breakpoints: HashMap::new(),
-            watchpoints: HashMap::new(),
+            watchpoints: BTreeMap::new(),
             sim: sim.id,
             resources: None,
             spaces: None,
+            last_watch_trigger,
         })
     }
 }
@@ -220,10 +258,29 @@ impl SingleThreadOps for IrisGdbStub<'_> {
                     simulation_time::stop(self.iris, self.sim).map_err(|_| ())?;
                     return Ok(StopReason::GdbInterrupt);
                 }
+                std::thread::sleep(std::time::Duration::from_millis(100));
             }
             if act == ResumeAction::Step {
                 return Ok(StopReason::DoneStep);
             } else {
+                if let Ok(mut locked) = self.last_watch_trigger.try_lock() {
+                    if let Some(trigger) = locked.take() {
+                        let kind = match trigger.kind.as_str() {
+                            "r" => WatchKind::Read,
+                            "w" => WatchKind::Write,
+                            "rw" => WatchKind::ReadWrite,
+                            _ => return Ok(StopReason::HwBreak),
+                        };
+                        let addr = if let Some((addr, _)) =
+                            self.watchpoints.range(trigger.addr..trigger.addr+trigger.size).next()
+                        {
+                            *addr
+                        } else {
+                            trigger.addr
+                        };
+                        return Ok(StopReason::Watch { kind, addr });
+                    }
+                }
                 return Ok(StopReason::HwBreak);
             }
         }
@@ -284,7 +341,6 @@ impl<'i> HwBreakpoint for IrisGdbStub<'i> {
                 addr as u64,
                 None,
                 space.id,
-                true,
                 false,
             ).ok()
         }).collect();
@@ -353,8 +409,8 @@ impl<'i> HwWatchpoint for IrisGdbStub<'i> {
                     Some(kind_to_str(kind)),
                     None,
                     Some(space.id),
-                    true,
                     crate::breakpoint::Type::Data,
+                    false,
                     false,
                 )
                 .ok()
@@ -373,7 +429,7 @@ impl<'i> HwWatchpoint for IrisGdbStub<'i> {
         addr: <Self::Arch as Arch>::Usize,
         _kind: WatchKind,
     ) -> TargetResult<bool, Self> {
-        if let Entry::Occupied(ent) = self.watchpoints.entry(addr) {
+        if let BTreeEntry::Occupied(ent) = self.watchpoints.entry(addr) {
             for bkpt in ent.get() {
                 if let Err(_) = breakpoint::delete(self.iris, self.instance_id, *bkpt) {
                     return Ok(false);

@@ -18,7 +18,7 @@ pub mod iris_client {
     pub struct FastModelIris {
         proc: Option<Child>,
         ipc: BufStream<TcpStream>,
-        inst_id: Option<u32>,
+        pub inst_id: Option<u32>,
         pub startup_time: Instant,
         current_msg_id: u32,
         callbacks: HashMap<String, Box<dyn FnMut(serde_json::Value) -> Result<(), IOError>>>,
@@ -575,12 +575,12 @@ pub mod breakpoint {
             size: Option<u64>,
             #[serde(rename = "spaceId",skip_serializing_if = "Option::is_none")]
             space_id: Option<u64>,
-            #[serde(rename = "syncEc")]
-            sync: bool,
             #[serde(rename = "type")]
             typ: Type,
             #[serde(rename = "dontStop")]
             dont_stop: bool,
+            #[serde(rename = "noCallback")]
+            no_callback: bool,
         } -> u64
     );
 
@@ -599,7 +599,6 @@ pub mod breakpoint {
         addr: u64,
         size: Option<u64>,
         space_id: u64,
-        sync: bool,
         dont_stop: bool,
     ) -> Result<u64, IOError> {
         set(
@@ -609,9 +608,9 @@ pub mod breakpoint {
             None,
             size,
             Some(space_id),
-            sync,
             Type::Code,
             dont_stop,
+            false,
         )
     }
 }
@@ -720,6 +719,7 @@ pub mod event_stream {
             source: u32,
             #[serde(rename = "ringBuffer")]
             buffer: bool,
+            stop: bool,
         } -> u64
     );
 

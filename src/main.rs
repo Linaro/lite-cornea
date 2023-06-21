@@ -110,6 +110,7 @@ fn enable_events(
                 to_id: my_id,
                 source: src.id,
                 buffer: false,
+                stop: false,
             })
             .collect::<Vec<_>>();
         fvp.batch(&streams)?;
@@ -268,7 +269,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let instance = instance_registry::get_instance_by_name(&mut fvp, inst).unwrap();
             let source = event::source(&mut fvp, instance.id, resource.clone())?;
             let _stream =
-                event_stream::create(&mut fvp, Some(instance.id), false, my_id, source.id, false)?;
+                event_stream::create(&mut fvp, Some(instance.id), false, my_id, source.id, false, false)?;
             fvp.register_callback(
                 format!("ec_{}", resource),
                 Box::new(|params| Ok(println!("{}", params))),
@@ -283,7 +284,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let sources = event::sources(&mut fvp, instance.id)?;
             for s in sources {
                 let _stream =
-                    event_stream::create(&mut fvp, Some(instance.id), false, my_id, s.id, false);
+                    event_stream::create(&mut fvp, Some(instance.id), false, my_id, s.id, false, false);
             }
             fvp.wait_for_events();
         }
@@ -353,7 +354,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let instance = instance_registry::get_instance_by_name(&mut fvp, inst.clone())?;
             let addr = u64::from_str_radix(&addr, 16)?;
             let size = size.and_then(|s| u64::from_str_radix(&s, 16).ok());
-            let bp = breakpoint::code(&mut fvp, instance.id, addr, size, 0, false, false)?;
+            let bp = breakpoint::code(&mut fvp, instance.id, addr, size, 0, false)?;
             simulation_time::run(&mut fvp, sim.id)?;
             while simulation_time::get(&mut fvp, sim.id)?.running {}
             breakpoint::delete(&mut fvp, instance.id, bp)?;
