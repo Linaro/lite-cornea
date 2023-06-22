@@ -30,8 +30,8 @@ struct WatchTrigger {
     kind: String,
     #[serde(rename="ACCESS_ADDR")]
     addr: u64,
-    #[serde(rename="ACCESS_SIZE")]
-    size: u64,
+    #[serde(rename="BPT_ID")]
+    id: u64
 }
 
 pub struct IrisGdbStub<'i> {
@@ -271,13 +271,13 @@ impl SingleThreadOps for IrisGdbStub<'_> {
                             "rw" => WatchKind::ReadWrite,
                             _ => return Ok(StopReason::HwBreak),
                         };
-                        let addr = if let Some((addr, _)) =
-                            self.watchpoints.range(trigger.addr..trigger.addr+trigger.size).next()
-                        {
-                            *addr
-                        } else {
-                            trigger.addr
-                        };
+                        let addr = self.watchpoints.iter().find_map(
+                            |(k, v)| if v.contains(&trigger.id) {
+                                Some(*k)
+                            } else {
+                                None
+                            });
+                        let addr = addr.unwrap_or(trigger.addr);
                         return Ok(StopReason::Watch { kind, addr });
                     }
                 }
