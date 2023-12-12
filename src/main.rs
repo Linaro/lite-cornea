@@ -27,8 +27,8 @@ enum Command {
     EventFields(ResourceReadArgs),
     /// Log events as they occur
     EventLog(ResourceOptionArgs),
-    /// Print information about an instance
-    ResourceList(InstanceArgs),
+    /// Describe the matching registers of an instance
+    RegisterList(InstanceArgs),
     /// Print information about an instance
     MemorySpaces(InstanceArgs),
     /// Print the children of this instance
@@ -39,8 +39,8 @@ enum Command {
     Break(ReadMemArgs),
     /// Reset the platform
     Reset,
-    /// Read a reesource on an instance
-    ResourceRead(ResourceReadArgs),
+    /// Read matching registers from an instance
+    RegisterRead(ResourceReadArgs),
     /// Provide a GDB server for the iris server over a pipe
     GdbProxy(InstanceArgs),
 }
@@ -215,7 +215,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let my_id = fvp.register()?;
     use Command::*;
     match args.command {
-        ResourceList(InstanceArgs { inst }) => {
+        RegisterList(InstanceArgs { inst }) => {
             let instance = instance_registry::get_instance_by_name(&mut fvp, inst).unwrap();
             println!(
                 "{:<6}│{:^6}│ {:>20} │ {}",
@@ -288,7 +288,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             fvp.wait_for_events();
         }
-        ResourceRead(ResourceReadArgs { inst, resource }) => {
+        RegisterRead(ResourceReadArgs { inst, resource }) => {
             let instance = instance_registry::get_instance_by_name(&mut fvp, inst)?;
             println!("{:>8} │ {}", "value", "name");
             println!("{:═>8}═╪═{:═<35}", "", "");
