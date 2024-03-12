@@ -9,5 +9,6 @@ nixpkgs.stdenv.mkDerivation {
     gnuplot
     gdb
     lsof # Helpful to determine FVP port
+    mdbook
   ];
 }
