@@ -6,14 +6,14 @@ are performed on an instance and happen from that instance's
 perspective, as if the hardware the instance is emulating were
 to do the request itself.
 
-Instances are conventionally organized into a heirachy.
-The names of instances reflect it's position in this hierachy,
+Instances are organized into a hierarchy by convention.
+The names of an instance reflect it's position in this hierarchy,
 starting with the root, and moving down the tree, separating
 each layer with a '.'.
 
-# Inspecting the heirachy
+# Inspecting the hierarchy
 
-On the command line, cornea can inspect the instance hierachy
+On the command line, cornea can inspect the instance hierarchy
 with the `child-list` subcommand.
 
 For example, listing the children instances of the secure element
@@ -32,7 +32,7 @@ $ cornea child-list component.IoT_Corstone_1000.se
 ---- etc. ----
 ```
 
-When no parent component is specified, all instances are printed.
+When no parent instance is specified, all instances are printed.
 This subcommand can be useful when piped to a search tool such
 as grep to find instances that are important like a cpu:
 
