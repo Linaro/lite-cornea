@@ -4,4 +4,5 @@
 - [Iris](./Iris.md)
 - [Resources](./Resources.md)
 - [Memory](./Memory.md)
+- [Events](./Events.md)
 - [GDB](./GDB.md)
