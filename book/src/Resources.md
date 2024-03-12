@@ -1,7 +1,7 @@
 # Resources
 
 Iris Resources are a collection of hardware registers and
-invocation parameters speciifc to that hardware.
+invocation parameters specific to that hardware.
 
 Cornea allows for resource discovery with the resource-list
 subcommand. For example, the following prints a table
@@ -18,7 +18,7 @@ Reg   │   64 │                   X2 │ X2
 ```
 
 These resources may be accessed by name with the resource-
-read subcommand. For example, the following printsthe PC of
+read subcommand. For example, the following prints the PC of
 the host cpu0:
 
 ```bash

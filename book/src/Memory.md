@@ -21,3 +21,9 @@ $ cornea memory-read component.TC2.css.rss.cpu 310000a8 8 --group-by u32
          0        4        8        c
 310000a0                   5b2e3408 6e72ea2f         .4.[/.rn
 ```
+
+# Spaces
+
+Some instances, such as cpus, have multiple ways to view memory,
+or even multiple, disjoint memories.
+Cornea includes a subcommand to query these spaces, memory-spaces.
