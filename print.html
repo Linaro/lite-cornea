@@ -1,0 +1,376 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js light">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Cornea Guide</title>
+        <meta name="robots" content="noindex" />
+        <!-- Custom HTML head -->
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        <link rel="icon" href="favicon.svg">
+        <link rel="shortcut icon" href="favicon.png">
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="stylesheet" href="css/print.css" media="print">
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="fonts/fonts.css">
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+    </head>
+    <body>
+        <!-- Provide site root to javascript -->
+        <script type="text/javascript">
+            var path_to_root = "";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script type="text/javascript">
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script type="text/javascript">
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script type="text/javascript">
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="chapter_1.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="Iris.html"><strong aria-hidden="true">2.</strong> Iris</a></li><li class="chapter-item expanded "><a href="Resources.html"><strong aria-hidden="true">3.</strong> Resources</a></li><li class="chapter-item expanded "><a href="Memory.html"><strong aria-hidden="true">4.</strong> Memory</a></li><li class="chapter-item expanded "><a href="Events.html"><strong aria-hidden="true">5.</strong> Events</a></li><li class="chapter-item expanded "><a href="GDB.html"><strong aria-hidden="true">6.</strong> GDB</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Cornea Guide</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script type="text/javascript">
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="cornea"><a class="header" href="#cornea">Cornea</a></h1>
+<p>Cornea is a shim over the IRIS Debug server present in
+arm FVPs and Fast Models.
+Cornea, through IRIS, allows access to the simulated hardware
+within these modles on the command line and through a gdb
+proxy server without .</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="a-quick-iris-primer"><a class="header" href="#a-quick-iris-primer">A quick IRIS primer</a></h1>
+<p>IRIS organizes hardware into discrete units called instances.
+Many operations, such as memory and register reads and writes,
+are performed on an instance and happen from that instance's
+perspective, as if the hardware the instance is emulating were
+to do the request itself.</p>
+<p>Instances are organized into a hierarchy by convention.
+The names of an instance reflect it's position in this hierarchy,
+starting with the root, and moving down the tree, separating
+each layer with a '.'.</p>
+<h1 id="inspecting-the-hierarchy"><a class="header" href="#inspecting-the-hierarchy">Inspecting the hierarchy</a></h1>
+<p>On the command line, cornea can inspect the instance hierarchy
+with the <code>child-list</code> subcommand.</p>
+<p>For example, listing the children instances of the secure element
+within the Corstone1000 model looks like:</p>
+<pre><code class="language-bash">$ cornea child-list component.IoT_Corstone_1000.se
+.cpu
+.ClkCtrl.clkSelect
+.ClkCtrl.clkGate
+.ClkCtrl
+.cpu_labeller
+.SysCtrlRegs
+.ChassisCtrlRegs
+.uart0
+---- etc. ----
+</code></pre>
+<p>When no parent instance is specified, all instances are printed.
+This subcommand can be useful when piped to a search tool such
+as grep to find instances that are important like a cpu:</p>
+<pre><code>$ cornea child-list | rg 'cpu0?$'
+component.TC2.css.scp.cpu
+component.TC2.css.rss.cpu
+component.TC2.css.cluster0.subcluster0.cpu0
+component.TC2.css.cluster0.subcluster1.cpu0
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="resources"><a class="header" href="#resources">Resources</a></h1>
+<p>Iris Resources are a collection of hardware registers and
+invocation parameters specific to that hardware.</p>
+<p>Cornea allows for resource discovery with the resource-list
+subcommand. For example, the following prints a table
+describing the resources of the host-cluster0, cpu0:</p>
+<pre><code class="language-bash">$ cornea resource-list component.IoT_Corstone_1000.host.cluster0.core0
+type  │ bits │                 name │ description
+══════╪══════╪══════════════════════╪═════════════════════
+Reg   │   32 │          PC_MEMSPACE │ Iris memory space id of the current PC and the current SP.
+Reg   │   64 │                   X0 │ X0
+Reg   │   64 │                   X1 │ X1
+Reg   │   64 │                   X2 │ X2
+---- etc. ----
+</code></pre>
+<p>These resources may be accessed by name with the resource-
+read subcommand. For example, the following prints the PC of
+the host cpu0:</p>
+<pre><code class="language-bash">$ cornea resurce-read component.IoT_Corstone_1000.host.cluster0.cpu0 PC
+   value │ name
+═════════╪════════════════════════════════════
+       0 │ PC_MEMSPACE
+       0 │ PC
+</code></pre>
+<p>Furthermore, to look at the semihosting parameters for the scp cpu:</p>
+<pre><code>$ cornea resource-read component.TC2.css.scp.cpu semihosting
+   value │ name
+═════════╪════════════════════════════════════
+       1 │ semihosting-enable
+      ab │ semihosting-Thumb_SVC
+       0 │ semihosting-heap_base
+20700000 │ semihosting-heap_limit
+20800000 │ semihosting-stack_base
+20700000 │ semihosting-stack_limit
+       0 │ semihosting-prefix
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="memory"><a class="header" href="#memory">Memory</a></h1>
+<p>Cornea reads memory from the perspective of an instance with
+the memory-read subcommand. This command creates human-readable,
+compact hex-dumps and can group memory locations into various word
+sizes.</p>
+<p>For example, to read 8 bytes of memory from flash0, starting at
+address 6, grouped into 2-byte/u16 chunks:</p>
+<pre><code>$ cornea memory-read component.IoT_Corstone_1000.board.flash0 6 8 --group-by u16
+         0    2    4    6    8    a    c    e
+00000000                e800 0010 e7ff e800            ........
+</code></pre>
+<p>As another example, on another platform, the following reads 2
+32-bit words as seen by the rss cpu, starting at 0x310000a8:</p>
+<pre><code>$ cornea memory-read component.TC2.css.rss.cpu 310000a8 8 --group-by u32
+         0        4        8        c
+310000a0                   5b2e3408 6e72ea2f         .4.[/.rn
+</code></pre>
+<h1 id="spaces"><a class="header" href="#spaces">Spaces</a></h1>
+<p>Some instances, such as cpus, have multiple ways to view memory,
+or even multiple, disjoint memories.
+Cornea includes a subcommand to query these spaces, memory-spaces.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="events"><a class="header" href="#events">Events</a></h1>
+<p>Cornea may listen for certain events provided by instances.
+The following subcommands interact with events:</p>
+<ul>
+<li><code>event-sources</code> - List and describe events that an instance
+may emit.</li>
+<li><code>event-fields</code> - Describe the structure of an event</li>
+<li><code>event-log</code> - Print events in JSON as they happen</li>
+</ul>
+<p>In all the examples in this chapter, our goal will be to read
+the uart traffic, line-by-line, from uart0.</p>
+<h1 id="sources"><a class="header" href="#sources">Sources</a></h1>
+<p>Event sources vary between instances, and many instances
+do not produce events.
+Cornea is able to list event sources per-instance with the
+<code>event-sources</code> subcommand.</p>
+<p>For example, we can look through the events provided by uart0:</p>
+<pre><code>$ cornea event-sources component.FVP_Base_RevC_2xAEMvA.bp.pl011_uart0
+                    name │ description
+═════════════════════════╪═════════════════════
+      CHECKPOINT_MESSAGE │ Report error messages from the checkpointing process
+  CHECKPOINT_RESTORE_END │ Checkpoint restore completed
+CHECKPOINT_RESTORE_START │ Checkpoint restore about to start
+     CHECKPOINT_SAVE_END │ Checkpoint save completed
+   CHECKPOINT_SAVE_START │ Checkpoint save about to start
+      pl011_character_in │ A character was received.
+     pl011_character_out │ A character was written to the UART to output.
+ pl011_line_buffered_out │ The buffered output of character_out.  The buffer is flushed when any control character is received.  The control characters do not form part of the buffer.  The buffer's size is limited to 255 characters and truncation is indicated by an appended '...'
+</code></pre>
+<p>With this, we can tell from the name and description, that we
+are interested in the event <code>pl011_line_buffered_out</code>.</p>
+<h1 id="fields"><a class="header" href="#fields">Fields</a></h1>
+<p>Events are a structured data format, that may differ for each event on each instance.
+Understanding the structure of an event is critical for understanding
+an event log.
+Cornea queries the event structure with the <code>event-fields</code> subcommand.</p>
+<p>Continuing with out uart0 example:</p>
+<pre><code>$ cornea event-fields component.FVP_Base_RevC_2xAEMvA.bp.pl011_uart0 pl011_line_buffered_out
+type  │ size │                 name │ description
+══════╪══════╪══════════════════════╪═════════════════════
+uint  │    8 │                 tick │ The count of ticks from simulation start that the UART has received at the point at which it receives the control character that flushes the buffer.
+string│    0 │               buffer │ The line buffer.
+</code></pre>
+<p>This event is straightforward: it contains a timestamp and a line as
+written to the uart.</p>
+<h1 id="log"><a class="header" href="#log">Log</a></h1>
+<p>The final step in events is logging them.
+Cornea provides the <code>event-log</code> subcommand for this purpose.</p>
+<p>Continuing our uart example:</p>
+<pre><code>$ cornea event-log component.FVP_Base_RevC_2xAEMvA.bp.pl011_uart0 pl011_line_buffered_out
+{&quot;esId&quot;:0,&quot;fields&quot;:{&quot;buffer&quot;:&quot;NOTICE:  Booting Trusted Firmware&quot;,&quot;tick&quot;:10},&quot;instId&quot;:649,&quot;sInstId&quot;:104,&quot;time&quot;:982880000}
+{&quot;esId&quot;:0,&quot;fields&quot;:{&quot;buffer&quot;:&quot;NOTICE:  BL1: v2.9(debug):v2.9.0-353-g2503c8f32-dirty&quot;,&quot;tick&quot;:11},&quot;instId&quot;:649,&quot;sInstId&quot;:104,&quot;time&quot;:1016500000}
+</code></pre>
+<p>This may not be the most readable output, so we can use jq to clean it up:</p>
+<pre><code>$ cornea event-log component.FVP_Base_RevC_2xAEMvA.bp.pl011_uart0 pl011_line_buffered_out \
+| jq .fields.buffer
+&quot;INFO:    Loading image id=13 at address 0x4003000&quot;
+&quot;INFO:    Image id=13 loaded: 0x4003000 - 0x4003244&quot;
+&quot;INFO:    Loading image id=3 at address 0x4003000&quot;
+&quot;INFO:    Image id=3 loaded: 0x4003000 - 0x40151dd&quot;
+&quot;INFO:    BL2: Loading image id 23&quot;
+&quot;INFO:    Loading image id=6 at address 0x7f00000&quot;
+&quot;INFO:    Image id=6 loaded: 0x7f00000 - 0x7f002cb&quot;
+</code></pre>
+<p>Much nicer. Quite an unusual route to the uart output though.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="gdb-proxy"><a class="header" href="#gdb-proxy">GDB Proxy</a></h1>
+<p>Cornea can translate between the GDB remote debug protocol (over
+pipe '|') with the
+the gdb-proxy subcommand. This command causes cornea to act as a
+bridge, allowing gdb to control and debug an FVP as it normally would.</p>
+<pre><code>$ gdb -q
+(gdb) set architecture aarch64
+The target architecture is set to &quot;aarch64&quot;.
+(gdb) add-symbol-file ~/src/c/tf-a/build/GENERATED/fvp-tc2-tbb_fvp-linux.tc-fip.tc-tc2-debug/artefacts/debug/bl31.elf
+add symbol table from file &quot;/home/jimbri01/src/c/tf-a/build/GENERATED/fvp-tbb-mbedtls-ecdsa_fvp-tbb_fvp-tftf.fwu-aemv8a/artefacts/debug/bl31.elf&quot;
+(y or n) y
+Reading symbols from /home/jimbri01/src/c/tf-a/build/GENERATED/fvp-tbb-mbedtls-ecdsa_fvp-tbb_fvp-tftf.fwu-aemv8a/artefacts/debug/bl31.elf...
+(gdb) target remote | cornea gdb-proxy component.TC2.css.cluster0.subcluster0.cpu0
+(gdb)
+</code></pre>
+<p>After an initialization sequence, such as the one above, gdb may be
+used to debug the processor selected as the single instance argument.
+To simplify usage, you can use <code>env</code> and <code>gdb</code> to create an executable
+script of gdb commands that will act as if they were entered into the
+prompt on startup. For example, the below script does the same as the
+interactive snippet above, allowing you to skip typing or copying the
+commands.</p>
+<pre><code>#!/usr/bin/env -S gdb -q -ix
+set architecture aarch64
+add-symbol-file ~/src/c/tf-a/build/GENERATED/fvp-tc2-tbb_fvp-linux.tc-fip.tc-tc2-debug/artefacts/debug/bl31.elf
+target remote | cornea gdb-proxy component.TC2.css.cluster0.subcluster0.cpu0
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+            </nav>
+
+        </div>
+
+        <!-- Livereload script (if served using the cli tool) -->
+        <script type="text/javascript">
+            const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsAddress = wsProtocol + "//" + location.host + "/" + "__livereload";
+            const socket = new WebSocket(wsAddress);
+            socket.onmessage = function (event) {
+                if (event.data === "reload") {
+                    socket.close();
+                    location.reload();
+                }
+            };
+
+            window.onbeforeunload = function() {
+                socket.close();
+            }
+        </script>
+        <script type="text/javascript">
+            window.playground_copyable = true;
+        </script>
+        <script src="elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="mark.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="searcher.js" type="text/javascript" charset="utf-8"></script>
+        <script src="clipboard.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="highlight.js" type="text/javascript" charset="utf-8"></script>
+        <script src="book.js" type="text/javascript" charset="utf-8"></script>
+
+        <!-- Custom JS scripts -->
+        <script type="text/javascript">
+        window.addEventListener('load', function() {
+            window.setTimeout(window.print, 100);
+        });
+        </script>
+    </body>
+</html>
