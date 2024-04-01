@@ -7,7 +7,7 @@ Cornea allows for resource discovery with the resource-list
 subcommand. For example, the following prints a table
 describing the resources of the host-cluster0, cpu0:
 ```bash
-$ cornea resource-list component.IoT_Corstone_1000.host.cluster0.core0
+$ cornea resource-list host.cluster0.core0
 type  │ bits │                 name │ description
 ══════╪══════╪══════════════════════╪═════════════════════
 Reg   │   32 │          PC_MEMSPACE │ Iris memory space id of the current PC and the current SP.
@@ -22,7 +22,7 @@ read subcommand. For example, the following prints the PC of
 the host cpu0:
 
 ```bash
-$ cornea resurce-read component.IoT_Corstone_1000.host.cluster0.cpu0 PC
+$ cornea resurce-read host.cluster0.cpu0 PC
    value │ name
 ═════════╪════════════════════════════════════
        0 │ PC_MEMSPACE
@@ -32,7 +32,7 @@ $ cornea resurce-read component.IoT_Corstone_1000.host.cluster0.cpu0 PC
 Furthermore, to look at the semihosting parameters for the scp cpu:
 
 ```
-$ cornea resource-read component.TC2.css.scp.cpu semihosting
+$ cornea resource-read css.scp.cpu semihosting
    value │ name
 ═════════╪════════════════════════════════════
        1 │ semihosting-enable

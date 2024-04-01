@@ -19,7 +19,7 @@ Cornea is able to list event sources per-instance with the
 
 For example, we can look through the events provided by uart0:
 ```
-$ cornea event-sources component.FVP_Base_RevC_2xAEMvA.bp.pl011_uart0
+$ cornea event-sources bp.pl011_uart0
                     name │ description
 ═════════════════════════╪═════════════════════
       CHECKPOINT_MESSAGE │ Report error messages from the checkpointing process
@@ -44,7 +44,7 @@ CHECKPOINT_RESTORE_START │ Checkpoint restore about to start
 
  Continuing with out uart0 example:
  ```
-$ cornea event-fields component.FVP_Base_RevC_2xAEMvA.bp.pl011_uart0 pl011_line_buffered_out
+$ cornea event-fields bp.pl011_uart0 pl011_line_buffered_out
 type  │ size │                 name │ description
 ══════╪══════╪══════════════════════╪═════════════════════
 uint  │    8 │                 tick │ The count of ticks from simulation start that the UART has received at the point at which it receives the control character that flushes the buffer.
@@ -61,14 +61,14 @@ Cornea provides the `event-log` subcommand for this purpose.
 
 Continuing our uart example:
 ```
-$ cornea event-log component.FVP_Base_RevC_2xAEMvA.bp.pl011_uart0 pl011_line_buffered_out
+$ cornea event-log bp.pl011_uart0 pl011_line_buffered_out
 {"esId":0,"fields":{"buffer":"NOTICE:  Booting Trusted Firmware","tick":10},"instId":649,"sInstId":104,"time":982880000}
 {"esId":0,"fields":{"buffer":"NOTICE:  BL1: v2.9(debug):v2.9.0-353-g2503c8f32-dirty","tick":11},"instId":649,"sInstId":104,"time":1016500000}
 ```
 
 This may not be the most readable output, so we can use jq to clean it up:
 ```
-$ cornea event-log component.FVP_Base_RevC_2xAEMvA.bp.pl011_uart0 pl011_line_buffered_out \
+$ cornea event-log bp.pl011_uart0 pl011_line_buffered_out \
 | jq .fields.buffer
 "INFO:    Loading image id=13 at address 0x4003000"
 "INFO:    Image id=13 loaded: 0x4003000 - 0x4003244"

@@ -13,7 +13,7 @@ The target architecture is set to "aarch64".
 add symbol table from file "/home/jimbri01/src/c/tf-a/build/GENERATED/fvp-tbb-mbedtls-ecdsa_fvp-tbb_fvp-tftf.fwu-aemv8a/artefacts/debug/bl31.elf"
 (y or n) y
 Reading symbols from /home/jimbri01/src/c/tf-a/build/GENERATED/fvp-tbb-mbedtls-ecdsa_fvp-tbb_fvp-tftf.fwu-aemv8a/artefacts/debug/bl31.elf...
-(gdb) target remote | cornea gdb-proxy component.TC2.css.cluster0.subcluster0.cpu0
+(gdb) target remote | cornea gdb-proxy css.cluster0.subcluster0.cpu0
 (gdb)
 ```
 
@@ -29,5 +29,5 @@ commands.
 #!/usr/bin/env -S gdb -q -ix
 set architecture aarch64
 add-symbol-file ~/src/c/tf-a/build/GENERATED/fvp-tc2-tbb_fvp-linux.tc-fip.tc-tc2-debug/artefacts/debug/bl31.elf
-target remote | cornea gdb-proxy component.TC2.css.cluster0.subcluster0.cpu0
+target remote | cornea gdb-proxy css.cluster0.subcluster0.cpu0
 ```
