@@ -1,6 +1,7 @@
 use std::convert::TryInto;
 use std::io::{stdin, stdout};
 use std::str::FromStr;
+use std::iter;
 
 use clap::{Parser, Subcommand};
 use gdbstub::GdbStub;
@@ -140,6 +141,48 @@ impl FromStr for GroupBy {
     }
 }
 
+fn mismatch(xs: &[u8], ys: &[u8]) -> usize {
+    mismatch_chunks::<128>(xs, ys)
+}
+
+fn mismatch_chunks<const N: usize>(xs: &[u8], ys: &[u8]) -> usize {
+    let off = iter::zip(xs.chunks_exact(N), ys.chunks_exact(N))
+        .take_while(|(x, y)| x == y)
+        .count()
+        * N;
+    off + iter::zip(&xs[off..], &ys[off..])
+        .take_while(|(x, y)| x == y)
+        .count()
+}
+
+fn common_prefix_len<'a, I: IntoIterator<Item=&'a str>>(haystack: I) -> usize {
+    let mut haystack = haystack.into_iter();
+    let start = match haystack.next() {
+        Some(start) => start,
+        None => return 0,
+    };
+    let prefix = |e: &str| {
+        mismatch(e.as_bytes(), start.as_bytes())
+    };
+    haystack.map(prefix).min().unwrap_or(0)
+}
+
+fn find_instance(fvp: &mut FastModelIris, name: String) -> Result<instance_registry::Instance, std::io::Error> {
+    if let Ok(inst) = instance_registry::get_instance_by_name(fvp, name.clone()) {
+        return Ok(inst);
+    }
+    let name = &name.trim_start_matches(".");
+    let instance_list = instance_registry::list_instances(fvp, "component".to_string())?;
+    let prefix = common_prefix_len(instance_list.iter().map(|i| i.name.as_str()));
+    for inst in instance_list {
+        let n = &inst.name[prefix..].trim_start_matches(".");
+        if n == name {
+            return Ok(inst);
+        }
+    }
+    Err(std::io::Error::new(std::io::ErrorKind::Other, "Instance not found"))
+}
+
 fn print_hex_dump(address: u64, buff: &[u8], group_by: GroupBy) {
     match group_by {
         GroupBy::U8 => println!("         0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f"),
@@ -216,7 +259,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     use Command::*;
     match args.command {
         RegisterList(InstanceArgs { inst }) => {
-            let instance = instance_registry::get_instance_by_name(&mut fvp, inst).unwrap();
+            let instance = find_instance(&mut fvp, inst)?;
             println!(
                 "{:<6}│{:^6}│ {:>20} │ {}",
                 "type", "bits", "name", "description"
@@ -235,7 +278,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
         EventSources(InstanceArgs { inst }) => {
-            let instance = instance_registry::get_instance_by_name(&mut fvp, inst).unwrap();
+            let instance = find_instance(&mut fvp, inst)?;
             let sources = event::sources(&mut fvp, instance.id)?;
             let name_len = sources.iter().map(|s| s.name.len()).max().unwrap_or(0);
             println!("{:>name_len$} │ {}", "name", "description");
@@ -247,7 +290,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
         EventFields(ResourceReadArgs { inst, resource }) => {
-            let instance = instance_registry::get_instance_by_name(&mut fvp, inst).unwrap();
+            let instance = find_instance(&mut fvp, inst)?;
             let source = event::source(&mut fvp, instance.id, resource)?;
             println!(
                 "{:<6}│{:^6}│ {:>20} │ {}",
@@ -265,8 +308,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         EventLog(ResourceOptionArgs {
             inst,
             resource: Some(resource),
-        }) => {
-            let instance = instance_registry::get_instance_by_name(&mut fvp, inst).unwrap();
+         }) => {
+            let instance = find_instance(&mut fvp, inst)?;
             let source = event::source(&mut fvp, instance.id, resource.clone())?;
             let _stream =
                 event_stream::create(&mut fvp, Some(instance.id), false, my_id, source.id, false, false)?;
@@ -280,7 +323,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             inst,
             resource: None,
         }) => {
-            let instance = instance_registry::get_instance_by_name(&mut fvp, inst).unwrap();
+            let instance = find_instance(&mut fvp, inst)?;
             let sources = event::sources(&mut fvp, instance.id)?;
             for s in sources {
                 let _stream =
@@ -289,7 +332,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             fvp.wait_for_events();
         }
         RegisterRead(ResourceReadArgs { inst, resource }) => {
-            let instance = instance_registry::get_instance_by_name(&mut fvp, inst)?;
+            let instance = find_instance(&mut fvp, inst)?;
             println!("{:>8} │ {}", "value", "name");
             println!("{:═>8}═╪═{:═<35}", "", "");
             for res in resource::get_list(&mut fvp, instance.id, None, None)? {
@@ -303,7 +346,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         ChildList(OptionalInstanceArgs { inst }) => {
             let name = match inst.clone() {
-                Some(i) => instance_registry::get_instance_by_name(&mut fvp, i)?.name,
+                Some(i) => find_instance(&mut fvp, i)?.name,
                 None => String::new(),
             };
             for instance in instance_registry::list_instances(&mut fvp, name.clone())? {
@@ -313,7 +356,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
         MemorySpaces(InstanceArgs { inst }) => {
-            let instance = instance_registry::get_instance_by_name(&mut fvp, inst)?;
+            let instance = find_instance(&mut fvp, inst)?;
             let spaces = memory::spaces(&mut fvp, instance.id)?;
             let name_len = spaces.iter().map(|s| s.name.len()).max().unwrap_or(0);
             println!("{:>name_len$} │ {}", "name", "description");
@@ -332,7 +375,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             size,
             group_by,
         }) => {
-            let instance = instance_registry::get_instance_by_name(&mut fvp, inst.clone())?;
+            let instance = find_instance(&mut fvp, inst)?;
             let addr = u64::from_str_radix(&addr, 16)?;
             let size = u64::from_str_radix(&size.unwrap_or_else(|| "4".to_string()), 16)?;
             let memory = memory::read(&mut fvp, instance.id, 0, addr, 1, size)?;
@@ -368,7 +411,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             simulation::wait(&mut fvp, sim.id)?;
         }
         GdbProxy(InstanceArgs { inst }) => {
-            let instance = instance_registry::get_instance_by_name(&mut fvp, inst.clone())?;
+            let instance = find_instance(&mut fvp, inst)?;
             let res = resource::get_list(&mut fvp, instance.id, None, None)?;
             if res.iter().any(|r| r.name == "X30") {
                 use cornea::gdb::a64::{GdbOverPipe, IrisGdbStub};
