@@ -1,7 +1,7 @@
 use std::convert::TryInto;
 use std::io::{stdin, stdout};
-use std::str::FromStr;
 use std::iter;
+use std::str::FromStr;
 
 use clap::{Parser, Subcommand};
 use gdbstub::GdbStub;
@@ -213,19 +213,20 @@ fn mismatch_chunks<const N: usize>(xs: &[u8], ys: &[u8]) -> usize {
         .count()
 }
 
-fn common_prefix_len<'a, I: IntoIterator<Item=&'a str>>(haystack: I) -> usize {
+fn common_prefix_len<'a, I: IntoIterator<Item = &'a str>>(haystack: I) -> usize {
     let mut haystack = haystack.into_iter();
     let start = match haystack.next() {
         Some(start) => start,
         None => return 0,
     };
-    let prefix = |e: &str| {
-        mismatch(e.as_bytes(), start.as_bytes())
-    };
+    let prefix = |e: &str| mismatch(e.as_bytes(), start.as_bytes());
     haystack.map(prefix).min().unwrap_or(0)
 }
 
-fn find_instance(fvp: &mut FastModelIris, name: String) -> Result<instance_registry::Instance, std::io::Error> {
+fn find_instance(
+    fvp: &mut FastModelIris,
+    name: String,
+) -> Result<instance_registry::Instance, std::io::Error> {
     if let Ok(inst) = instance_registry::get_instance_by_name(fvp, name.clone()) {
         return Ok(inst);
     }
@@ -238,7 +239,10 @@ fn find_instance(fvp: &mut FastModelIris, name: String) -> Result<instance_regis
             return Ok(inst);
         }
     }
-    Err(std::io::Error::new(std::io::ErrorKind::Other, "Instance not found"))
+    Err(std::io::Error::new(
+        std::io::ErrorKind::Other,
+        "Instance not found",
+    ))
 }
 
 fn print_hex_dump(address: u64, buff: &[u8], group_by: GroupBy) {
@@ -366,11 +370,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         EventLog(ResourceOptionArgs {
             inst,
             resource: Some(resource),
-         }) => {
+        }) => {
             let instance = find_instance(&mut fvp, inst)?;
             let source = event::source(&mut fvp, instance.id, resource.clone())?;
-            let _stream =
-                event_stream::create(&mut fvp, Some(instance.id), false, my_id, source.id, false, false)?;
+            let _stream = event_stream::create(
+                &mut fvp,
+                Some(instance.id),
+                false,
+                my_id,
+                source.id,
+                false,
+                false,
+            )?;
             fvp.register_callback(
                 format!("ec_{}", resource),
                 Box::new(|params| Ok(println!("{}", params))),
@@ -384,8 +395,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let instance = find_instance(&mut fvp, inst)?;
             let sources = event::sources(&mut fvp, instance.id)?;
             for s in sources {
-                let _stream =
-                    event_stream::create(&mut fvp, Some(instance.id), false, my_id, s.id, false, false);
+                let _stream = event_stream::create(
+                    &mut fvp,
+                    Some(instance.id),
+                    false,
+                    my_id,
+                    s.id,
+                    false,
+                    false,
+                );
             }
             fvp.wait_for_events();
         }

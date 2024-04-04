@@ -277,14 +277,7 @@ impl<'i> HwBreakpoint for IrisGdbStub<'i> {
         if self.breakpoints.contains_key(&addr) {
             return Ok(true);
         }
-        if let Ok(id) = breakpoint::code(
-            self.iris,
-            self.instance_id,
-            addr as u64,
-            None,
-            0,
-            false,
-        ) {
+        if let Ok(id) = breakpoint::code(self.iris, self.instance_id, addr as u64, None, 0, false) {
             self.breakpoints.insert(addr, id);
             Ok(true)
         } else {
