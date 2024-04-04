@@ -535,6 +535,46 @@ pub mod memory {
                 count: u64,
             } -> ReadRes
     );
+
+    #[derive(Deserialize, Debug)]
+    #[serde(rename_all = "camelCase")]
+    pub struct SidebandInfo {
+        pub region_start: u64,
+        pub region_end: u64,
+        pub physical_address: u64,
+        pub ipa: u64,
+        pub no_execute: bool,
+    }
+
+    iris_rpc_fn!(
+        sideband_info "memory_getSidebandInfo"
+            MemorySidebandReq {
+                #[serde(rename = "instId")]
+                id: u32,
+                #[serde(rename = "spaceId")]
+                space: u64,
+                address: u64,
+            } -> SidebandInfo
+    );
+
+    #[derive(Deserialize, Debug)]
+    #[serde(rename_all = "camelCase")]
+    pub struct AddressTranslation {
+        pub address: Vec<u64>,
+    }
+
+    iris_rpc_fn!(
+        translate "memory_translateAddress"
+            MemoryTranslateReq {
+                #[serde(rename = "instId")]
+                id: u32,
+                address: u64,
+                #[serde(rename = "spaceId")]
+                in_space: u64,
+                #[serde(rename = "outSpaceId")]
+                out_space: u64,
+            } -> AddressTranslation
+    );
 }
 
 pub mod breakpoint {

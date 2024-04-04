@@ -30,8 +30,12 @@ enum Command {
     EventLog(ResourceOptionArgs),
     /// Describe the matching registers of an instance
     RegisterList(InstanceArgs),
-    /// Print information about an instance
+    /// Tabulate memory spaces
     MemorySpaces(InstanceArgs),
+    /// Tabulate memory sideband info
+    MemoryInfo(SidebandArgs),
+    /// Translate an address into another memory space
+    MemoryTranslate(TranslateArgs),
     /// Print the children of this instance
     ChildList(OptionalInstanceArgs),
     /// Read memory from the prespective of an instance
@@ -56,6 +60,60 @@ struct OptionalInstanceArgs {
 struct InstanceArgs {
     /// The name of the instance to query
     inst: String,
+}
+
+#[derive(Parser, Debug)]
+struct SidebandArgs {
+    /// The name of the instance to read from
+    inst: String,
+    /// Address to print from
+    addr: String,
+}
+
+#[derive(Parser, Debug)]
+struct TranslateArgs {
+    /// The name of the instance to read from
+    inst: String,
+    /// Address to print from
+    addr: String,
+    /// Memory space that the address belongs to
+    from: SpaceArg,
+    /// Memory space that the result belongs to
+    to: SpaceArg,
+}
+
+#[derive(Parser, Debug)]
+struct SpaceArg {
+    inner: String,
+}
+
+impl FromStr for SpaceArg {
+    type Err = String;
+    fn from_str(frm: &str) -> Result<Self, String> {
+        Ok(Self {
+            inner: frm.to_string(),
+        })
+    }
+}
+
+impl SpaceArg {
+    fn into_id(self, fvp: &mut FastModelIris, inst: u32) -> Result<u64, std::io::Error> {
+        let num = u64::from_str(&self.inner);
+        if let Ok(n) = num {
+            return Ok(n);
+        }
+        let spaces = memory::spaces(fvp, inst)?;
+        match spaces
+            .iter()
+            .find(|i| i.name.to_lowercase() == self.inner.to_lowercase())
+        {
+            Some(spc) => Ok(spc.id),
+            None => Err(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                format!("Space {} not found", self.inner),
+            )),
+        }
+    }
 }
 
 #[derive(Parser, Debug)]
@@ -353,6 +411,38 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 if instance.name != name {
                     println!("{}", instance.name.trim_start_matches(&name));
                 }
+            }
+        }
+        MemoryInfo(SidebandArgs { inst, addr }) => {
+            let instance = find_instance(&mut fvp, inst)?;
+            let addr = u64::from_str_radix(&addr, 16)?;
+            let info = memory::sideband_info(&mut fvp, instance.id, 0, addr)?;
+            println!(
+                "{:>8} │ {:>8} │ {:>8} │ {:>8} │ {:>2}",
+                "Start", "End addr", "Phys", "IPA", "NX"
+            );
+            println!(
+                "{:>8x} │ {:>8x} │ {:>8x} │ {:>8x} │ {:>2}",
+                info.region_start,
+                info.region_end,
+                info.physical_address,
+                info.ipa,
+                if info.no_execute { "Y" } else { "" }
+            );
+        }
+        MemoryTranslate(TranslateArgs {
+            inst,
+            addr,
+            from,
+            to,
+        }) => {
+            let instance = find_instance(&mut fvp, inst)?;
+            let addr = u64::from_str_radix(&addr, 16)?;
+            let from = from.into_id(&mut fvp, instance.id)?;
+            let to = to.into_id(&mut fvp, instance.id)?;
+            let out_addr = memory::translate(&mut fvp, instance.id, addr, from, to)?.address;
+            for oa in out_addr {
+                println!("{oa:>8x}");
             }
         }
         MemorySpaces(InstanceArgs { inst }) => {
