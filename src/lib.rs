@@ -35,6 +35,12 @@ pub mod iris_client {
         params: &'a S,
         id: u64,
     }
+    #[derive(Deserialize, Debug)]
+    pub struct RpcError {
+        #[allow(dead_code)]
+        code: u64,
+        message: String,
+    }
 
     #[derive(Deserialize, Debug)]
     #[serde(untagged)]
@@ -44,15 +50,15 @@ pub mod iris_client {
             #[serde(default)]
             params: serde_json::Value,
         },
+        Error {
+            error: RpcError,
+            id: u64,
+        },
         Responce {
             // some functions have no return value; others return Null. We treat
             // those the same
             #[serde(default)]
             result: serde_json::Value,
-            id: u64,
-        },
-        Error {
-            error: serde_json::Value,
             id: u64,
         },
     }
@@ -300,7 +306,7 @@ pub mod iris_client {
                                     Ok(RpcRes::Error { error, .. }) => {
                                         return Err(IOError::new(
                                             std::io::ErrorKind::Other,
-                                            error.to_string(),
+                                            error.message,
                                         ))
                                     }
                                     Err(_e) => {
